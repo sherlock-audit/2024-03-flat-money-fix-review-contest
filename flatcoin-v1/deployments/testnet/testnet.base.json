@@ -1,0 +1,68 @@
+{
+    "admin": {
+      "address": "0x684E1db2FcFEF671721fF07C0C91f73aC2b2104d",
+      "txHash": "0x909bb7b3c58f6f437e8e40fbc6972fd1e27e35c0b41b62a79d678bf6126c5446"
+    },
+    "proxies": [
+      {
+        "name": "FlatcoinVault",
+        "address": "0x5A5d085656ABC42E7fA77A62357d5A44B4e778dF",
+        "txHash": "0x108b789f9ed20065252b96794b925691afc2cb084e51890a22343ee79b01df43",
+        "kind": "transparent"
+      },
+      {
+        "name": "StableModule",
+        "address": "0x7F284B45A92644FaB41002a01Fd5926D4d87a692",
+        "txHash": "0x04bbefe4eab869739afa54d9329ee1fc83e83885c7279d13437bcec4340c5480",
+        "kind": "transparent"
+      },
+      {
+        "name": "LeverageModule",
+        "address": "0x5520b021d038935aEa4F886cF22A153e2227D295",
+        "txHash": "0x4a92fa840d2ee6f38dade0a59f2e3afdd4f274fb23d0bb0366f180db44fe12c0",
+        "kind": "transparent"
+      },
+      {
+        "name": "OracleModule",
+        "address": "0xffcE2C3837634039c7a21683fA536A19b8142EbD",
+        "txHash": "0xa9e8e28d4a57de6544f384f94c540a3586ee907b1320ab2f7a3158b93be147b7",
+        "kind": "transparent"
+      },
+      {
+        "name": "LiquidationModule",
+        "address": "0xCA7839195245b1bA5DBA0fACeDf0d7b2fAc0266C",
+        "txHash": "0xccfa2decba084d947e77fd969c90e6b32015447dbcb9c3501baee48b1011e4b0",
+        "kind": "transparent"
+      },
+      {
+        "name": "DelayedOrder",
+        "address": "0x3f75d399949469DB92288186fe6F749dce830518",
+        "txHash": "0x593a5ff6f3e53b301316f09698ba09a0cf69a15f23c8aa1153c60ea8940f7adf",
+        "kind": "transparent"
+      },
+      {
+        "name": "LimitOrder",
+        "address": "0x28Cc362A0a2386Ee37C3eDF9C5061d229F1e1B79",
+        "txHash": "0xe654937985dd043d29d7dd8158013ed17fd8c9ac3226b8379699c2a6334995ba",
+        "kind": "transparent"
+      },
+      {
+        "name": "PointsModule",
+        "address": "0xcE9695b8dE9679A4CfDaD502Fc5624c5F1FD5d30",
+        "txHash": "0x836da4574660f9e9f7a3e6d76c09403ab89af257f421b8566040ba41b1dcaad5",
+        "kind": "transparent"
+      }
+    ],
+    "impls": {
+      "FlatcoinVault": "0x0c0a0f82c4d8b0e2724d51c8788fa1d5633f33ec",
+      "StableModule": "0x13A656616C080C719c579A91bAC2d04e535607b3",
+      "LeverageModule": "0xCf96E09866CD78c174580791ade3398B2D18A45A",
+      "OracleModule": "0xe58079Cc243041c28c253D6638d23e3faf539d59",
+      "LiquidationModule": "0x578B9D5f84357e085e8a7E7c4092Bb42d5d4C11f",
+      "DelayedOrder": "0x06ff9e9F0601d89a74A6447066ceED5b4E6D9C60",
+      "LimitOrder": "0xE6f4a5b58C8A2722e7D833EE271E050b92ACA03E",
+      "PointsModule": "0x1C95Ee974b480A1a8dc1b470DFf5075eccECBbfe",
+      "Viewer": "0x16Ea2c61144d495eC6954d9cc04b42Fab200774A",
+      "KeeperFee": "0xCB391CEeD2e8d4fF9B9b2712f632e576De282736"
+    }
+}
