@@ -2,15 +2,8 @@ import "dotenv/config";
 
 import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-toolbox";
-import "@openzeppelin/hardhat-upgrades";
 import "hardhat-abi-exporter";
 import { HardhatUserConfig } from "hardhat/config";
-
-import "./tasks/authorize-module.js";
-import "./tasks/deploy-module.js";
-import "./tasks/modify-config.js";
-import "./tasks/upgrade-module.js";
-import "./tasks/reset-config.js";
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -46,6 +39,11 @@ const config: HardhatUserConfig = {
             gasPrice: 2000000000, // 2 gwei
             loggingEnabled: true,
         },
+        base: {
+            chainId: 8453,
+            url: process.env.BASE_RPC_URL || "https://mainnet.base.org/",
+            loggingEnabled: true,
+        }
     },
     etherscan: {
         // https://hardhat.org/plugins/nomiclabs-hardhat-etherscan.html#multiple-api-keys-and-alternative-block-explorers
@@ -67,6 +65,7 @@ const config: HardhatUserConfig = {
         runOnCompile: true,
         clear: true,
         only: ["src/"],
+        except: ["src/flattened-contracts"]
     },
 };
 

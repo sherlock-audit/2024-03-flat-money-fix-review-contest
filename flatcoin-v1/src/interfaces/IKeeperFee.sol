@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 interface IKeeperFee {
     function getKeeperFee() external view returns (uint256 keeperFee);
 
+    function getKeeperFee(uint256 baseFee) external view returns (uint256 keeperFee);
+
     function getConfig()
         external
         view

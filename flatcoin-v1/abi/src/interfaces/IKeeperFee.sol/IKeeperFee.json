@@ -54,6 +54,25 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "baseFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "getKeeperFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "keeperFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "keeperFeeUpperBound",
         "type": "uint256"
       },

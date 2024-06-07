@@ -226,7 +226,18 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "maxAge",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "priceDiffCheck",
+        "type": "bool"
+      }
+    ],
     "name": "getPrice",
     "outputs": [
       {
@@ -244,13 +255,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "maxAge",
-        "type": "uint32"
-      }
-    ],
+    "inputs": [],
     "name": "getPrice",
     "outputs": [
       {

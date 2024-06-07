@@ -73,6 +73,9 @@ library FlatcoinErrors {
     /// @dev DelayedOrder
     error DepositCapReached(uint256 collateralCap);
 
+    /// @dev DelayedOrder
+    error InsufficientGlobalMargin();
+
     /// @dev LimitOrder
     error LimitOrderInvalid(uint256 tokenId);
 
@@ -90,9 +93,6 @@ library FlatcoinErrors {
 
     /// @dev LeverageModule
     error MarginMismatchOnClose();
-
-    /// @dev FlatcoinVault
-    error InsufficientGlobalMargin();
 
     /// @dev OracleModule
     error RefundFailed();

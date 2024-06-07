@@ -29,5 +29,5 @@ contract LiquidationModuleEncoder is EncoderBase {
                     configTomlFile.readUint(".LiquidationModule.liquidationFeeUpperBound")
                 )
             );
-    } 
+    }
 }

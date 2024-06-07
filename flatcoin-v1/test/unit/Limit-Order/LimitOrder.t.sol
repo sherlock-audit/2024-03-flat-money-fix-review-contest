@@ -451,4 +451,30 @@ contract LimitOrderTest is OrderHelpers, ExpectRevert {
             value: 1
         });
     }
+
+    function test_revert_limit_order_price_deviation() public {
+        uint256 collateralPriceOriginal = 1000e8;
+        uint256 collateralPricePyth = 1101e8;
+        uint256 priceDiffPercent = ((collateralPricePyth - collateralPriceOriginal) * 1e18) / collateralPriceOriginal;
+
+        vm.startPrank(admin);
+        oracleModProxy.setMaxDiffPercent(0.01e18);
+
+        vm.startPrank(alice);
+
+        limitOrderProxy.announceLimitOrder({
+            tokenId: tokenId,
+            priceLowerThreshold: 900e18,
+            priceUpperThreshold: 1100e18
+        });
+
+        skip(uint256(vaultProxy.minExecutabilityAge()));
+
+        bytes[] memory priceUpdateData = getPriceUpdateData(collateralPricePyth);
+
+        vm.startPrank(keeper);
+
+        vm.expectRevert(abi.encodeWithSelector(FlatcoinErrors.PriceMismatch.selector, priceDiffPercent));
+        limitOrderProxy.executeLimitOrder{value: 1}(tokenId, priceUpdateData);
+    }
 }

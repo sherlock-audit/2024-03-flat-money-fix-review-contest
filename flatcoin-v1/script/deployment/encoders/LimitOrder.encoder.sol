@@ -16,12 +16,6 @@ contract LimitOrderEncoder is EncoderBase {
 
         require(address(vault) != address(0), "LimitOrderEncoder: Vault address null");
 
-        return
-            abi.encodeCall(
-                LimitOrder.initialize,
-                (
-                    vault
-                )
-            );
+        return abi.encodeCall(LimitOrder.initialize, (vault));
     }
 }

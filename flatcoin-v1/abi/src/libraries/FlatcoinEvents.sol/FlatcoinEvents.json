@@ -36,7 +36,13 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "lastPrice",
+        "name": "averagePrice",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "adjustPrice",
         "type": "uint256"
       }
     ],

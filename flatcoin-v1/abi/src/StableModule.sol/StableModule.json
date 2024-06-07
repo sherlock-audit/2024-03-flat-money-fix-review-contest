@@ -657,13 +657,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "_maxAge",
-        "type": "uint32"
-      }
-    ],
+    "inputs": [],
     "name": "stableCollateralPerShare",
     "outputs": [
       {
@@ -676,7 +670,18 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "_maxAge",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "_priceDiffCheck",
+        "type": "bool"
+      }
+    ],
     "name": "stableCollateralPerShare",
     "outputs": [
       {
@@ -707,6 +712,11 @@
         "internalType": "uint32",
         "name": "_maxAge",
         "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "_priceDiffCheck",
+        "type": "bool"
       }
     ],
     "name": "stableCollateralTotalAfterSettlement",

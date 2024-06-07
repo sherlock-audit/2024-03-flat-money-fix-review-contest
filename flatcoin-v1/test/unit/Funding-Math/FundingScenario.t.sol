@@ -8,7 +8,7 @@ import {FlatcoinErrors} from "src/libraries/FlatcoinErrors.sol";
 import "src/interfaces/IChainlinkAggregatorV3.sol";
 
 /// @dev These tests replicate the rounding issue found using fuzzing.
-contract FundingMathTest is Setup, OrderHelpers, ExpectRevert {
+contract FundingScenarioTest is Setup, OrderHelpers, ExpectRevert {
     function setUp() public override {
         super.setUp();
 

@@ -664,7 +664,7 @@ contract LiquidateTest is Setup, OrderHelpers {
     }
 
     // The test here checks that global position data is updated correctly after a liquidation of a position heavily underwater.
-    // By hevily underwater, we mean that the margin after settlement is more negative than the margin deposited for the position.
+    // By heavily underwater, we mean that the margin after settlement is more negative than the margin deposited for the position.
     // Now when such a position is liquidated, the funding fees settled for this position should be reversed.
     // Let's say the market was skewed long the entire time the position was open which means that the longs were paying the LPs funding fees.
     // As this bad position was not liquidated in time, it is still paying funding fees to the LPs.

@@ -1,13 +1,11 @@
 # This the the Flatmoney Configs file.
-# - Note that the types are inferred in the deployment contracts. Feel free to change the order of the variables.
-# - One caveat however is that you cannot use scientific notation with that is, Floating point numbers with decimal digits are not allowed.
-#   This means you can't use the value 0.5e16, you can either use the string representation without scientific notation or use 5e15.
-# - For more encoding rules specific to Foundry see this doc: https://book.getfoundry.sh/cheatcodes/parse-toml
-# - To refer TOML specs see: https://toml.io/en/v1.0.0#spec
 
-owner="0x1677640787891022efEC86828BC386828c68d2aA" # Owner of the protocol contracts including the proxyAdmins.
+# Owner of the protocol contracts which include: ProxyAdmins, FlatcoinVault & KeeperFee.
+# Should be a Gnosis Safe multisig to use other scripts.
+owner="0x1677640787891022efEC86828BC386828c68d2aA"
 
 [FlatcoinVault]
+isUpgradeable=true
 collateral="0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c" # rETH on Base
 maxExecutabilityAge=60 # 60 seconds
 maxFundingVelocity="1000000000000000" # 1e15 => 0.1e16 => 0.1%
@@ -17,31 +15,39 @@ skewFractionMax="1200000000000000000" # 12e17 => 1.2e18 => 120%
 stableCollateralCap="1000000000000000000000" # 1000 rETH => ~3.8M USD
 
 [LeverageModule]
+isUpgradeable=true
 leverageMax="25000000000000000000" # 25e18 => 25x
 leverageMin="1500000000000000000" # 15e17 => 1.5e18 => 1.5x
 leverageTradingFee="800000000000000" # 8e14 => 0.08e16 => 0.08%
 marginMin="15000000000000000" # 15e15 => 0.015e18 rETH => ~50 USD
 
 [StableModule]
+isUpgradeable=true
 stableWithdrawFee="2500000000000000" # 25e14 => 0.25e16 => 0.25%
 
 [OracleModule]
+isUpgradeable=true
 collateral="0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c" # rETH on Base
-maxDiffPercent="12500000000000000" # 125e14 => 1.25e16 => 1.25%
+maxDiffPercent="20000000000000000" # 200e14 => 2e16 => 2%
 offchainOracle.maxAge=86_400 # 86400 seconds => 24 hours
-offchainOracle.minConfidenceRatio=1_000
+offchainOracle.minConfidenceRatio=134 # 100/134 => +-0.746% price deviation acceptable
 offchainOracle.oracleContract="0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a" # Pyth Base contract
 offchainOracle.priceId="0xa0255134973f4fdf2f8f7808354274a3b1ebc6ee438be898d045e8b56ba1fe13" # Pyth rETH ID
 onchainOracle.maxAge=86_400 # 86400 seconds => 24 hours
 onchainOracle.oracleContract="0x4aF79bbBd345ae56D9e9Af4482e77CB4EB98e85e" # dHEDGE rETH oracle
 
+[DelayedOrder]
+isUpgradeable=true
+
 [LiquidationModule]
+isUpgradeable=true
 liquidationBufferRatio="10000000000000000" # 1e16 => 1%
 liquidationFeeLowerBound="2000000000000000000" # 2 USD
 liquidationFeeRatio="5000000000000000" # 5e15 => 0.5e16 => 0.5%
 liquidationFeeUpperBound="100000000000000000000" # 100 USD
 
 [PointsModule]
+isUpgradeable=true
 decayTime=86_400 # 86400 seconds => 24 hours
 maxAccumulatedMint="10000000000000000000000" # 10_000 points per decayTime amount of seconds
 pointsPerDeposit=0
@@ -50,12 +56,16 @@ treasury="0xC905b53b0E6D177e7497CF8d5c53fafA61B51820" # Treasury multisig on Bas
 unlockTaxVest=31_536_000 # 31_536_000 seconds => ~1 year
 
 [KeeperFee]
+isUpgradeable=false
 assetToPayWith="0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c" # rETH on Base
 ethOracle="0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70" # Base mainnet ETH Chainlink oracle
-keeperFeeLowerBound="1000000000000000000" # 1 USD
+keeperFeeLowerBound="500000000000000000" # 50 cents => $0.5
 keeperFeeUpperBound="30000000000000000000" # 30 USD
 profitMarginPercent="300000000000000000" # 30e16 => 30%
-profitMarginUSD="1000000000000000000" # 1 USD
+profitMarginUSD="500000000000000000" # 50 cents => $0.5
 gasUnitsL1=30_000
 gasUnitsL2=1_200_000
 stalenessPeriod=1200 # 1_200 seconds => 20 minutes
+
+[Viewer]
+isUpgradeable=false

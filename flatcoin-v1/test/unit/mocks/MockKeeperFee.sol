@@ -15,6 +15,10 @@ contract MockKeeperFee is IKeeperFee {
         keeperFee = 0.001e18; // mock 0.001 ETH
     }
 
+    function getKeeperFee(uint256) public pure returns (uint256 keeperFee) {
+        keeperFee = 0.001e18;
+    }
+
     function getConfig()
         public
         view

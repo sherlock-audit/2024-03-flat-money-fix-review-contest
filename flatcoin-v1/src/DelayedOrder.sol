@@ -400,6 +400,8 @@ contract DelayedOrder is
         // This is more important in case the we allow for limit orders in the future.
         vault.settleFundingFees();
 
+        _checkGlobalMarginPositive();
+
         if (orderType == FlatcoinStructs.OrderType.StableDeposit) {
             _executeStableDeposit(account);
         } else if (orderType == FlatcoinStructs.OrderType.StableWithdraw) {
@@ -660,6 +662,8 @@ contract DelayedOrder is
         // for a long time.
         vault.settleFundingFees();
 
+        _checkGlobalMarginPositive();
+
         if (keeperFee < IKeeperFee(vault.moduleAddress(FlatcoinModuleKeys._KEEPER_FEE_MODULE_KEY)).getKeeperFee())
             revert FlatcoinErrors.InvalidFee(keeperFee);
 
@@ -700,5 +704,11 @@ contract DelayedOrder is
         if (executableAtTime <= 0) revert FlatcoinErrors.ZeroValue("executableAtTime");
 
         expired = (executableAtTime + vault.maxExecutabilityAge() >= block.timestamp) ? false : true;
+    }
+
+    function _checkGlobalMarginPositive() private view {
+        int256 globalMarginDepositedTotal = vault.getGlobalPositions().marginDepositedTotal;
+
+        if (globalMarginDepositedTotal < 0) revert FlatcoinErrors.InsufficientGlobalMargin();
     }
 }

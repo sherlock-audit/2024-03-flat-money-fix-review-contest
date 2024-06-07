@@ -472,4 +472,114 @@ contract DelayedOrderTest is OrderHelpers, ExpectRevert {
             value: 1
         });
     }
+
+    function test_revert_announce_orders_when_global_margin_negative() public {
+        uint256 collateralPrice = 1000e8;
+        uint256 stableDeposit1 = 25e18;
+        uint256 stableDeposit2 = 25e18;
+        uint256 margin = 6e18;
+        uint256 size = 60e18;
+
+        setWethPrice(collateralPrice);
+
+        vm.startPrank(admin);
+
+        vaultProxy.setMaxFundingVelocity(0.03e18);
+
+        announceAndExecuteDeposit({
+            traderAccount: alice,
+            keeperAccount: keeper,
+            depositAmount: stableDeposit1,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        announceAndExecuteDeposit({
+            traderAccount: bob,
+            keeperAccount: keeper,
+            depositAmount: stableDeposit2,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        uint256 tokenId = announceAndExecuteLeverageOpen({
+            traderAccount: alice,
+            keeperAccount: keeper,
+            margin: margin,
+            additionalSize: size,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        // Skipping arbitrary number of days in order to replicate margin drain
+        // due to funding fee settlements.
+        skip(8 days);
+
+        setWethPrice(collateralPrice);
+
+        vaultProxy.settleFundingFees();
+
+        _expectRevertWithCustomError({
+            target: address(delayedOrderProxy),
+            callData: abi.encodeWithSelector(
+                delayedOrderProxy.announceStableDeposit.selector,
+                5e18,
+                stableModProxy.stableDepositQuote(5e18),
+                mockKeeperFee.getKeeperFee()
+            ),
+            expectedErrorSignature: "InsufficientGlobalMargin()",
+            ignoreErrorArguments: true
+        });
+
+        _expectRevertWithCustomError({
+            target: address(delayedOrderProxy),
+            callData: abi.encodeWithSelector(
+                delayedOrderProxy.announceStableWithdraw.selector,
+                5e18,
+                stableModProxy.stableWithdrawQuote(5e18),
+                mockKeeperFee.getKeeperFee()
+            ),
+            expectedErrorSignature: "InsufficientGlobalMargin()",
+            ignoreErrorArguments: true
+        });
+
+        _expectRevertWithCustomError({
+            target: address(delayedOrderProxy),
+            callData: abi.encodeWithSelector(
+                delayedOrderProxy.announceLeverageOpen.selector,
+                5e18,
+                5e18,
+                collateralPrice,
+                mockKeeperFee.getKeeperFee()
+            ),
+            expectedErrorSignature: "InsufficientGlobalMargin()",
+            ignoreErrorArguments: true
+        });
+
+        _expectRevertWithCustomError({
+            target: address(delayedOrderProxy),
+            callData: abi.encodeWithSelector(
+                delayedOrderProxy.announceLeverageAdjust.selector,
+                tokenId,
+                5e18,
+                5e18,
+                collateralPrice,
+                mockKeeperFee.getKeeperFee()
+            ),
+            expectedErrorSignature: "InsufficientGlobalMargin()",
+            ignoreErrorArguments: true
+        });
+
+        _expectRevertWithCustomError({
+            target: address(delayedOrderProxy),
+            callData: abi.encodeWithSelector(
+                delayedOrderProxy.announceLeverageClose.selector,
+                tokenId,
+                collateralPrice,
+                mockKeeperFee.getKeeperFee()
+            ),
+            expectedErrorSignature: "InsufficientGlobalMargin()",
+            ignoreErrorArguments: true
+        });
+    }
 }

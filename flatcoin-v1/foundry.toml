@@ -7,11 +7,13 @@ optimizer = true
 optimizer-runs = 500
 solc_version = '0.8.20'
 evm_version = 'paris'
-fs_permissions = [{ access = 'read-write', path = './'}]
-ffi = true
+
+[profile.openzeppelin]
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
+ffi = true
+fs_permissions = [{ access = 'read-write', path = './'}]
 
 [fuzz]
 runs = 15_000

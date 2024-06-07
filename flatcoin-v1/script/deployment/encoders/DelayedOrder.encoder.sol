@@ -9,7 +9,7 @@ import "forge-std/StdToml.sol";
 
 contract DelayedOrderEncoder is EncoderBase {
     using stdToml for string;
-    
+
     function getEncodedCallData() public override returns (bytes memory) {
         string memory deploymentsTomlFile = getDeploymentsTomlFile();
 
@@ -17,12 +17,6 @@ contract DelayedOrderEncoder is EncoderBase {
 
         require(address(vault) != address(0), "DelayedOrderEncoder: Vault address null");
 
-        return
-            abi.encodeCall(
-                DelayedOrder.initialize,
-                (
-                    vault
-                )
-            );
+        return abi.encodeCall(DelayedOrder.initialize, (vault));
     }
 }

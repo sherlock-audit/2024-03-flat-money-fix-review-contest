@@ -47,8 +47,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     // keccak256(
     //     "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
     // );
-    bytes32 private constant SAFE_TX_TYPEHASH =
-        0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
+    bytes32 private constant SAFE_TX_TYPEHASH = 0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
 
     // Deterministic deployment address of the Gnosis Safe Multisend contract, configured by chain.
     address private SAFE_MULTISEND_ADDRESS;
@@ -64,9 +63,12 @@ abstract contract BatchScript is Script, DelegatePrank {
     bytes32 private walletType;
     uint256 private mnemonicIndex;
     bytes32 private privateKey;
+    string private accountKey;
 
     bytes32 private constant LOCAL = keccak256("local");
     bytes32 private constant LEDGER = keccak256("ledger");
+    bytes32 private constant TREZOR = keccak256("trezor");
+    bytes32 private constant KEYSTORE = keccak256("keystore");
 
     enum Operation {
         CALL,
@@ -99,28 +101,14 @@ abstract contract BatchScript is Script, DelegatePrank {
     // - `value` as in msg.value, sent as a `uint256` (=> 32 bytes),
     // -  length of `data` as a `uint256` (=> 32 bytes),
     // - `data` as `bytes`.
-    function addToBatch(
-        address to_,
-        uint256 value_,
-        bytes memory data_
-    ) public {
-        encodedTxns.push(
-            abi.encodePacked(Operation.CALL, to_, value_, data_.length, data_)
-        );
+    function addToBatch(address to_, uint256 value_, bytes memory data_) public {
+        encodedTxns.push(abi.encodePacked(Operation.CALL, to_, value_, data_.length, data_));
     }
 
     // Convenience funtion to add an encoded transaction to the batch, but passes
     // 0 as the `value` (equivalent to msg.value) field.
     function addToBatch(address to_, bytes memory data_) public {
-        encodedTxns.push(
-            abi.encodePacked(
-                Operation.CALL,
-                to_,
-                uint256(0),
-                data_.length,
-                data_
-            )
-        );
+        encodedTxns.push(abi.encodePacked(Operation.CALL, to_, uint256(0), data_.length, data_));
     }
 
     // Simulate then send the batch to the Safe API. If `send_` is `false`, the
@@ -138,8 +126,8 @@ abstract contract BatchScript is Script, DelegatePrank {
     // Internal functions
     function _initialize() private {
         // Set the chain ID
-        Chain memory chain = getChain(vm.envString("CHAIN"));
-        chainId = chain.chainId;
+        chainId = block.chainid;
+        string memory chainIdStr = vm.toString(chainId);
 
         // Set the Safe API base URL and multisend address based on chain
         // Modified this for our needs.
@@ -154,13 +142,15 @@ abstract contract BatchScript is Script, DelegatePrank {
         }
 
         // Load wallet information
-        walletType = keccak256(abi.encodePacked(vm.envString("WALLET_TYPE")));
+        walletType = keccak256(abi.encodePacked(vm.envString(string.concat("WALLET_TYPE_", chainIdStr))));
         if (walletType == LOCAL) {
-            privateKey = vm.envBytes32("PRIVATE_KEY");
-        } else if (walletType == LEDGER) {
-            mnemonicIndex = vm.envUint("MNEMONIC_INDEX");
+            privateKey = vm.envBytes32(string.concat("PRIVATE_KEY_", chainIdStr));
+        } else if (walletType == LEDGER || walletType == TREZOR) {
+            mnemonicIndex = vm.envUint(string.concat("MNEMONIC_INDEX_", chainIdStr));
+        } else if (walletType == KEYSTORE) {
+            accountKey = vm.envString(string.concat("ACCOUNT_KEY_", chainIdStr));
         } else {
-            revert("Unsupported wallet type");
+            revert(string.concat("Unsupported wallet type for chain id ", chainIdStr));
         }
     }
 
@@ -188,10 +178,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         batch.txHash = _getTransactionHash(safe_, batch);
     }
 
-    function _signBatch(
-        address safe_,
-        Batch memory batch_
-    ) internal returns (Batch memory) {
+    function _signBatch(address safe_, Batch memory batch_) internal returns (Batch memory) {
         // Get the typed data to sign
         string memory typedData = _getTypedData(safe_, batch_);
 
@@ -199,17 +186,13 @@ abstract contract BatchScript is Script, DelegatePrank {
         string memory commandStart = "cast wallet sign ";
         string memory wallet;
         if (walletType == LOCAL) {
-            wallet = string.concat(
-                "--private-key ",
-                vm.toString(privateKey),
-                " "
-            );
+            wallet = string.concat("--private-key ", vm.toString(privateKey), " ");
         } else if (walletType == LEDGER) {
-            wallet = string.concat(
-                "--ledger --mnemonic-index ",
-                vm.toString(mnemonicIndex),
-                " "
-            );
+            wallet = string.concat("--ledger --mnemonic-index ", vm.toString(mnemonicIndex), " ");
+        } else if (walletType == TREZOR) {
+            wallet = string.concat("--trezor --mnemonic-index ", vm.toString(mnemonicIndex), " ");
+        } else if (walletType == KEYSTORE) {
+            wallet = string.concat("--account ", accountKey, " ");
         } else {
             revert("Unsupported wallet type");
         }
@@ -219,14 +202,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(
-            commandStart,
-            wallet,
-            commandEnd,
-            "'",
-            typedData,
-            "'"
-        );
+        inputs[2] = string.concat(commandStart, wallet, commandEnd, "'", typedData, "'");
         bytes memory signature = vm.ffi(inputs);
 
         // Set the signature on the batch
@@ -238,11 +214,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     function _simulateBatch(address safe_, Batch memory batch_) internal {
         require(batch_.to.code.length > 0, "No code at address");
         vm.allowCheatcodes(safe_);
-        (bool success, bytes memory data) = delegatePrank(
-            safe_,
-            batch_.to,
-            batch_.data
-        );
+        (bool success, bytes memory data) = delegatePrank(safe_, batch_.to, batch_.data);
         if (success) {
             console2.log("Batch simulated successfully");
         } else {
@@ -271,10 +243,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         string memory payload = placeholder.serialize("sender", msg.sender);
 
         // Send batch
-        (uint256 status, bytes memory data) = endpoint.post(
-            _getHeaders(),
-            payload
-        );
+        (uint256 status, bytes memory data) = endpoint.post(_getHeaders(), payload);
 
         if (status == 201) {
             console2.log("Batch sent successfully");
@@ -287,17 +256,12 @@ abstract contract BatchScript is Script, DelegatePrank {
     // Computes the EIP712 hash of a Safe transaction.
     // Look at https://github.com/safe-global/safe-eth-py/blob/174053920e0717cc9924405e524012c5f953cd8f/gnosis/safe/safe_tx.py#L186
     // and https://github.com/safe-global/safe-eth-py/blob/master/gnosis/eth/eip712/__init__.py
-    function _getTransactionHash(
-        address safe_,
-        Batch memory batch_
-    ) internal view returns (bytes32) {
+    function _getTransactionHash(address safe_, Batch memory batch_) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
                     hex"1901",
-                    keccak256(
-                        abi.encode(DOMAIN_SEPARATOR_TYPEHASH, chainId, safe_)
-                    ),
+                    keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, chainId, safe_)),
                     keccak256(
                         abi.encode(
                             SAFE_TX_TYPEHASH,
@@ -317,10 +281,7 @@ abstract contract BatchScript is Script, DelegatePrank {
             );
     }
 
-    function _getTypedData(
-        address safe_,
-        Batch memory batch_
-    ) internal returns (string memory) {
+    function _getTypedData(address safe_, Batch memory batch_) internal returns (string memory) {
         // Create EIP712 structured data for the batch transaction to sign externally via cast
 
         // EIP712Domain Field Types
@@ -400,9 +361,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         return payload;
     }
 
-    function _stripSlashQuotes(
-        string memory str_
-    ) internal returns (string memory) {
+    function _stripSlashQuotes(string memory str_) internal returns (string memory) {
         // Remove slash quotes from string
         string memory command = string.concat(
             "sed 's/",
@@ -428,11 +387,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     function _getNonce(address safe_) internal returns (uint256) {
-        string memory endpoint = string.concat(
-            SAFE_API_BASE_URL,
-            vm.toString(safe_),
-            "/"
-        );
+        string memory endpoint = string.concat(SAFE_API_BASE_URL, vm.toString(safe_), "/");
         (uint256 status, bytes memory data) = endpoint.get();
         if (status == 200) {
             string memory result = string(data);
@@ -442,15 +397,8 @@ abstract contract BatchScript is Script, DelegatePrank {
         }
     }
 
-    function _getSafeAPIEndpoint(
-        address safe_
-    ) internal view returns (string memory) {
-        return
-            string.concat(
-                SAFE_API_BASE_URL,
-                vm.toString(safe_),
-                SAFE_API_MULTISIG_SEND
-            );
+    function _getSafeAPIEndpoint(address safe_) internal view returns (string memory) {
+        return string.concat(SAFE_API_BASE_URL, vm.toString(safe_), SAFE_API_MULTISIG_SEND);
     }
 
     function _getHeaders() internal pure returns (string[] memory) {
