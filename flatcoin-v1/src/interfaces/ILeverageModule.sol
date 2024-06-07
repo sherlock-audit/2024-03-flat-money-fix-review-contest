@@ -35,7 +35,10 @@ interface ILeverageModule is IERC721Enumerable {
 
     function fundingAdjustedLongPnLTotal() external view returns (int256 _fundingAdjustedPnL);
 
-    function fundingAdjustedLongPnLTotal(uint32 maxAge) external view returns (int256 _fundingAdjustedPnL);
+    function fundingAdjustedLongPnLTotal(
+        uint32 maxAge,
+        bool priceDiffCheck
+    ) external view returns (int256 _fundingAdjustedPnL);
 
     function tokenIdNext() external view returns (uint256 tokenId);
 

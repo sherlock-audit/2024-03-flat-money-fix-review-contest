@@ -18,7 +18,7 @@ contract OracleModuleEncoder is EncoderBase {
         string memory deploymentsTomlFile = getDeploymentsTomlFile();
 
         FlatcoinVault vault = FlatcoinVault(deploymentsTomlFile.readAddress(".FlatcoinVault.proxy"));
-        
+
         require(address(vault) != address(0), "OracleModuleEncoder: Vault address null");
 
         FlatcoinStructs.OnchainOracle memory onchainOracleConfig = FlatcoinStructs.OnchainOracle(

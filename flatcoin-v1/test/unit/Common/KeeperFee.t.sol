@@ -93,6 +93,7 @@ contract KeeperFeeTest is Setup {
             abi.encodeWithSignature("latestRoundData()"),
             abi.encode(0, 1000e8, 0, block.timestamp - stalenessPeriod - 1, 0)
         );
+        vm.mockCall(0x420000000000000000000000000000000000000F, abi.encodeWithSignature("baseFee()"), abi.encode(271)); // Base fee set as 271 wei.
 
         vm.expectRevert(abi.encodeWithSelector(FlatcoinErrors.ETHPriceStale.selector));
         keeperFeeContract.getKeeperFee();
@@ -105,6 +106,8 @@ contract KeeperFeeTest is Setup {
             abi.encode(0, -1000e8, 0, block.timestamp, 0)
         );
 
+        vm.mockCall(0x420000000000000000000000000000000000000F, abi.encodeWithSignature("baseFee()"), abi.encode(271)); // Base fee set as 271 wei.
+
         vm.expectRevert(abi.encodeWithSelector(FlatcoinErrors.ETHPriceInvalid.selector));
         keeperFeeContract.getKeeperFee();
     }
@@ -115,6 +118,8 @@ contract KeeperFeeTest is Setup {
         vm.expectRevert(
             abi.encodeWithSelector(FlatcoinErrors.PriceInvalid.selector, FlatcoinErrors.PriceSource.OnChain)
         );
+        vm.mockCall(0x420000000000000000000000000000000000000F, abi.encodeWithSignature("baseFee()"), abi.encode(271)); // Base fee set as 271 wei.
+
         keeperFeeContract.getKeeperFee();
     }
 
@@ -126,6 +131,7 @@ contract KeeperFeeTest is Setup {
             abi.encodeWithSignature("latestRoundData()"),
             abi.encode(0, 1000e8, 0, block.timestamp, 0)
         );
+        vm.mockCall(0x420000000000000000000000000000000000000F, abi.encodeWithSignature("baseFee()"), abi.encode(271)); // Base fee set as 271 wei.
         vm.mockCall(address(oracleModProxy), abi.encodeWithSignature("getPrice()"), abi.encode(1000e8, 1));
 
         vm.expectRevert(abi.encodeWithSelector(FlatcoinErrors.PriceStale.selector, FlatcoinErrors.PriceSource.OnChain));

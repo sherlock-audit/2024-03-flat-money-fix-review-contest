@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+import "../../helpers/Setup.sol";
 import {ExpectRevert} from "../../helpers/ExpectRevert.sol";
 import {OrderHelpers} from "../../helpers/OrderHelpers.sol";
 import {FlatcoinErrors} from "../../../src/libraries/FlatcoinErrors.sol";
@@ -228,6 +229,70 @@ contract FlatcoinVaultTest is OrderHelpers, ExpectRevert {
                 FlatcoinErrors.ZeroValue.selector,
                 "minExecutabilityAge|maxExecutabilityAge"
             )
+        });
+    }
+
+    /// @dev Test for the scenario when the LPs lose their deposits due to sudden price rise.
+    ///      The vault should revert updates when the `stableCollateralTotal` isn't enough to cover settled margins
+    ///      of the leverage traders.
+    function test_revert_when_LPs_lose_their_deposits_due_to_price_rise() public {
+        uint256 stableDeposit = 100e18;
+        uint256 skewFractionMax = vaultProxy.skewFractionMax();
+        uint256 additionalSize = (stableDeposit * skewFractionMax) / 1e18; // Calculate the max additional size that can be used to open a position.
+        uint256 margin = additionalSize; // Effectively creating a 2x leverage position.
+        uint256 collateralPrice = 1000e8;
+
+        setWethPrice(collateralPrice);
+
+        announceAndExecuteDeposit({
+            traderAccount: alice,
+            keeperAccount: keeper,
+            depositAmount: stableDeposit,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        uint256 tokenId1 = announceAndExecuteLeverageOpen({
+            traderAccount: bob,
+            keeperAccount: keeper,
+            margin: margin / 2,
+            additionalSize: additionalSize / 2,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        uint256 tokenId2 = announceAndExecuteLeverageOpen({
+            traderAccount: carol,
+            keeperAccount: keeper,
+            margin: margin / 2,
+            additionalSize: additionalSize / 2,
+            oraclePrice: collateralPrice,
+            keeperFeeAmount: 0
+        });
+
+        // LPs lose their deposits when price rises by this multiple.
+        // For example, if the `skewFractionMax` is 1.2 then price rise of 6x will cause LPs to lose their deposits.
+        uint256 lpLiquidationPriceRiseMultiple = skewFractionMax / (skewFractionMax - 1e18);
+        uint256 lpLiquidationPrice = collateralPrice * lpLiquidationPriceRiseMultiple + 10e8; // Adding a bit more to ensure fees and such factors are accounted for.
+
+        setWethPrice(lpLiquidationPrice);
+
+        announceAndExecuteLeverageClose({
+            tokenId: tokenId1,
+            traderAccount: bob,
+            keeperAccount: keeper,
+            oraclePrice: lpLiquidationPrice,
+            keeperFeeAmount: 0
+        });
+
+        _expectRevertWithCustomError({
+            target: address(this),
+            callData: abi.encodeCall(
+                this.announceAndExecuteLeverageClose,
+                (tokenId2, carol, keeper, lpLiquidationPrice, 0)
+            ),
+            expectedErrorSignature: "ValueNotPositive(string)",
+            errorData: abi.encodeWithSelector(FlatcoinErrors.ValueNotPositive.selector, "stableCollateralTotal")
         });
     }
 }

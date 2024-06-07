@@ -9,7 +9,7 @@ import "forge-std/StdToml.sol";
 
 contract ViewerEncoder is EncoderBase {
     using stdToml for string;
-    
+
     function getEncodedCallData() public override returns (bytes memory) {
         string memory deploymentsTomlFile = getDeploymentsTomlFile();
 

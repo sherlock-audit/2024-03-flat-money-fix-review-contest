@@ -33,7 +33,6 @@ contract KeeperFeeEncoder is EncoderBase {
             configTomlFile,
             deploymentsTomlFile
         );
-        
 
         return
             abi.encode(

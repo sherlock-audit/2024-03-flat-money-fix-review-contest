@@ -162,7 +162,10 @@ contract LimitOrder is ILimitOrder, ModuleUpgradeable, ReentrancyGuardUpgradeabl
         address account = leverageModule.ownerOf(tokenId);
         uint256 size = vault.getPosition(tokenId).additionalSize;
 
-        (uint256 price, ) = IOracleModule(vault.moduleAddress(FlatcoinModuleKeys._ORACLE_MODULE_KEY)).getPrice();
+        (uint256 price, ) = IOracleModule(vault.moduleAddress(FlatcoinModuleKeys._ORACLE_MODULE_KEY)).getPrice({
+            maxAge: 86_400,
+            priceDiffCheck: true
+        });
 
         // Check that the minimum time delay is reached before execution
         if (block.timestamp < order.executableAtTime)

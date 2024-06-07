@@ -64,12 +64,14 @@ contract KeeperFee is Ownable {
         _STALENESS_PERIOD = stalenessPeriod;
 
         // Check that the oracle asset price is valid
-        (uint256 assetPrice, uint256 timestamp) = IOracleModule(oracleModule).getPrice();
+        (uint256 assetPrice, ) = IOracleModule(oracleModule).getPrice();
 
         if (assetPrice <= 0) revert FlatcoinErrors.PriceInvalid(FlatcoinErrors.PriceSource.OnChain);
 
-        if (block.timestamp >= timestamp + stalenessPeriod)
-            revert FlatcoinErrors.PriceStale(FlatcoinErrors.PriceSource.OnChain);
+        (, , , uint256 ethPriceupdatedAt, ) = _ethOracle.latestRoundData();
+
+        // Check that the ETH oracle price is fresh.
+        if (block.timestamp >= ethPriceupdatedAt + stalenessPeriod) revert FlatcoinErrors.ETHPriceStale();
     }
 
     /////////////////////////////////////////////
@@ -78,6 +80,10 @@ contract KeeperFee is Ownable {
 
     /// @dev Returns computed gas price given on-chain variables.
     function getKeeperFee() public view returns (uint256 keeperFeeCollateral) {
+        return getKeeperFee(_gasPriceOracle.baseFee());
+    }
+
+    function getKeeperFee(uint256 baseFee) public view returns (uint256 keeperFeeCollateral) {
         uint256 ethPrice18;
         uint256 collateralPrice;
         {
@@ -115,7 +121,7 @@ contract KeeperFee is Ownable {
         // The Synthetix implementation can be found in function `getCostofExecutionEth` https://github.com/Synthetixio/synthetix-v3/blob/e7932e96d8153db0716f1e5dd6df78c1a1ec711e/auxiliary/OpGasPriceOracle/contracts/OpGasPriceOracle.sol#L72
         if (isEcotone) {
             // If it's an ecotone, use the new formula and interface
-            uint256 gasPriceL2 = _gasPriceOracle.baseFee();
+            uint256 gasPriceL2 = baseFee;
             uint256 baseFeeScalar = _gasPriceOracle.baseFeeScalar();
             uint256 l1BaseFee = _gasPriceOracle.l1BaseFee();
             uint256 blobBaseFeeScalar = _gasPriceOracle.blobBaseFeeScalar();
@@ -128,7 +134,7 @@ contract KeeperFee is Ownable {
             costOfExecutionGrossEth = ((_gasUnitsL1 * l1GasPrice) + (_gasUnitsL2 * gasPriceL2));
         } else {
             // If it's not an ecotone, use the legacy formula and interface.
-            uint256 gasPriceL2 = _gasPriceOracle.baseFee(); // baseFee and gasPrice are the same in the legacy contract. Both return block.basefee.
+            uint256 gasPriceL2 = baseFee; // baseFee and gasPrice are the same in the legacy contract. Both return block.basefee.
             uint256 overhead = _gasPriceOracle.overhead();
             uint256 l1BaseFee = _gasPriceOracle.l1BaseFee();
             uint256 decimals = _gasPriceOracle.decimals();

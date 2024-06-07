@@ -2,18 +2,60 @@
 pragma solidity 0.8.20;
 
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {EncoderBase} from "../deployment/misc/EncoderBase.sol";
+import {FileManager} from "../utils/FileManager.sol";
+import {BatchScript} from "../utils/BatchScript.sol";
 
-import "forge-std/Script.sol";
+import {FlatcoinVault} from "../../src/FlatcoinVault.sol";
+import {FlatcoinStructs} from "../../src/libraries/FlatcoinStructs.sol";
 
-contract DeployScript is Script {
+import "forge-std/StdStyle.sol";
+import "forge-std/StdToml.sol";
+import "forge-std/console2.sol";
+
+/// @title DeployScript
+/// @author dHEDGE
+/// @notice Deployment script for deploying upgradeable and immutable contracts.
+/// @dev The script assumes the following:
+///      - The encoded initialization data can be retrieved from an encoder contract.
+///      - The encoder contract file name should be the same as the module name with the suffix `.encoder.sol`.
+///      - The encoder contract name should be the same as the module name with the suffix `Encoder`.
+contract DeployScript is BatchScript, FileManager {
+    using stdToml for string;
+
+    function deployModules(string[] memory moduleName_, bool send_) public {
+        string memory configFile = getConfigTomlFile();
+
+        for (uint8 i; i < moduleName_.length; ++i) {
+            string memory moduleName = moduleName_[i];
+
+            if (configFile.readBool(string.concat(".", moduleName, ".isUpgradeable")) == false) {
+                deployImmutableContract(moduleName);
+            } else {
+                deployUpgradeableContract(moduleName);
+            }
+        }
+
+        if (encodedTxns.length != 0) executeBatch(configFile.readAddress(".owner"), send_);
+    }
+
     function deployUpgradeableContract(
-        string memory moduleName_,
-        address proxyAdminOwner_,
-        bytes memory encodedCallData_
-    ) public returns (address proxy_, address implementation_, address proxyAdmin_) {
+        string memory moduleName_
+    ) internal returns (address proxy_, address implementation_, address proxyAdmin_) {
+        address proxyAdminOwner = getConfigTomlFile().readAddress(".owner");
+
+        // Basically, the encoder contract qualified path should be of the form:- <moduleName>.encoder.sol:<moduleName>Encoder
+        EncoderBase encoder = EncoderBase(
+            deployCode(string.concat(moduleName_, ".encoder.sol:", moduleName_, "Encoder"))
+        );
+
         vm.startBroadcast();
 
-        proxy_ = Upgrades.deployTransparentProxy(moduleName_, proxyAdminOwner_, encodedCallData_);
+        proxy_ = Upgrades.deployTransparentProxy(
+            string.concat(moduleName_, ".sol"),
+            proxyAdminOwner,
+            encoder.getEncodedCallData()
+        );
 
         vm.stopBroadcast();
 
@@ -23,13 +65,14 @@ contract DeployScript is Script {
         _afterDeployment(moduleName_, proxy_, implementation_, proxyAdmin_);
     }
 
-    function deployImmutableContract(
-        string memory moduleName_,
-        bytes memory constructorData_
-    ) public returns (address contract_) {
+    function deployImmutableContract(string memory moduleName_) internal returns (address contract_) {
+        EncoderBase encoder = EncoderBase(
+            deployCode(string.concat(moduleName_, ".encoder.sol:", moduleName_, "Encoder"))
+        );
+
         vm.startBroadcast();
 
-        contract_ = deploy(moduleName_, constructorData_);
+        contract_ = deploy(string.concat(moduleName_, ".sol"), encoder.getEncodedCallData());
 
         vm.stopBroadcast();
 
@@ -38,22 +81,81 @@ contract DeployScript is Script {
 
     /// @dev Adapted from OpenZeppelin's Foundry Upgrades package.
     ///      See the original implementation at: https://github.com/OpenZeppelin/openzeppelin-foundry-upgrades/blob/359589365aeba6cf41d39bae69867446b194e582/src/Upgrades.sol#L487
-    function deploy(string memory contractName, bytes memory constructorData) public returns (address) {
-        bytes memory creationCode = vm.getCode(contractName);
-        address deployedAddress = _deployFromBytecode(abi.encodePacked(creationCode, constructorData));
+    ///      This function has to be public to be able to broadcast the contract creation transaction.
+    function deploy(string memory contractName_, bytes memory constructorData_) public returns (address) {
+        bytes memory creationCode = vm.getCode(contractName_);
+        address deployedAddress = _deployFromBytecode(abi.encodePacked(creationCode, constructorData_));
+
         if (deployedAddress == address(0)) {
-            revert(
-                string.concat(
-                    "Failed to deploy contract ",
-                    contractName,
-                    ' using constructor data "',
-                    string(constructorData),
-                    '"'
-                )
-            );
+            console2.log("Failed to deploy contract %s using the constructor data: ", contractName_);
+            console2.logBytes(constructorData_);
+
+            revert("Immutable contract deployment failed");
         }
 
         return deployedAddress;
+    }
+
+    function _afterDeployment(
+        string memory moduleName_,
+        address proxy_,
+        address implementation_,
+        address proxyAdmin
+    ) internal virtual {
+        string memory newKeyToAppend = _getNewKeyToAppend(moduleName_, proxy_, implementation_, proxyAdmin);
+
+        _tryAuthorizeModule(moduleName_, proxy_);
+        flattenContract(moduleName_);
+        _appendKeyToFile(newKeyToAppend);
+    }
+
+    function _afterDeployment(string memory moduleName_, address contract_) internal virtual {
+        string memory newKeyToAppend = _getNewKeyToAppend(moduleName_, contract_);
+
+        _tryAuthorizeModule(moduleName_, contract_);
+        _appendKeyToFile(newKeyToAppend);
+    }
+
+    function _tryAuthorizeModule(string memory moduleName_, address contract_) internal virtual {
+        (bool success, bytes memory data) = (contract_).call(abi.encodeWithSignature("MODULE_KEY()"));
+
+        if (!success) {
+            console2.log(
+                StdStyle.yellow(
+                    string.concat(
+                        "Module ",
+                        moduleName_,
+                        " does not have a MODULE_KEY() function. Please authorize this module manually if required."
+                    )
+                )
+            );
+
+            console2.log("Skipping authorization of the new implementation for %s", moduleName_);
+
+            return;
+        } else {
+            console2.log("Authorizing the new implementation for %s", moduleName_);
+
+            addToBatch(
+                getDeploymentsTomlFile().readAddress(".FlatcoinVault.proxy"),
+                abi.encodeCall(
+                    FlatcoinVault.addAuthorizedModule,
+                    (
+                        FlatcoinStructs.AuthorizedModule({
+                            moduleAddress: contract_,
+                            moduleKey: abi.decode(data, (bytes32))
+                        })
+                    )
+                )
+            );
+        }
+    }
+
+    function _appendKeyToFile(string memory key_) private {
+        string memory deploymentsFilePath = getDeploymentsFilePath();
+        string memory existingDeployments = getDeploymentsTomlFile();
+
+        vm.writeFile(deploymentsFilePath, string.concat(existingDeployments, key_));
     }
 
     function _deployFromBytecode(bytes memory bytecode) private returns (address) {
@@ -64,82 +166,30 @@ contract DeployScript is Script {
         return addr;
     }
 
-    function _afterDeployment(
+    function _getNewKeyToAppend(
         string memory moduleName_,
         address proxy_,
         address implementation_,
-        address proxyAdmin
-    ) private {
-        string memory projectRoot = vm.projectRoot();
-        string memory chainId = vm.toString(block.chainid);
-        string memory deploymentsFilePath = string.concat(projectRoot, "/deployments/", chainId, ".toml");
-
-        // If the deployments file related to thte current chain does not exist, create it.
-        if (!vm.isFile(deploymentsFilePath)) {
-            vm.writeFile(
-                deploymentsFilePath,
-                "# This file was generated programmatically by the Foundry deployment script.\n\n"
+        address proxyAdmin_
+    ) private pure returns (string memory) {
+        return
+            string.concat(
+                "[",
+                moduleName_,
+                "]\n",
+                'proxy="',
+                vm.toString(proxy_),
+                '"\n',
+                'implementation="',
+                vm.toString(implementation_),
+                '"\n',
+                'proxyAdmin="',
+                vm.toString(proxyAdmin_),
+                '"\n\n'
             );
-        }
-
-        string memory existingDeployments = vm.readFile(deploymentsFilePath);
-        string memory moduleName = _trimModuleName(moduleName_);
-        string memory newKeyToAppend = string.concat(
-            "[",
-            moduleName,
-            "]\n",
-            'proxy="',
-            vm.toString(proxy_),
-            '"\n',
-            'implementation="',
-            vm.toString(implementation_),
-            '"\n',
-            'proxyAdmin="',
-            vm.toString(proxyAdmin),
-            '"\n\n'
-        );
-
-        vm.writeFile(deploymentsFilePath, string.concat(existingDeployments, newKeyToAppend));
-        vm.closeFile(deploymentsFilePath);
     }
 
-    function _afterDeployment(string memory moduleName_, address contract_) private {
-        string memory projectRoot = vm.projectRoot();
-        string memory chainId = vm.toString(block.chainid);
-        string memory deploymentsFilePath = string.concat(projectRoot, "/deployments/", chainId, ".toml");
-
-        // If the deployments file related to thte current chain does not exist, create it.
-        if (!vm.isFile(deploymentsFilePath)) {
-            vm.writeFile(
-                deploymentsFilePath,
-                "# This file was generated programmatically by the Foundry deployment script.\n\n"
-            );
-        }
-
-        string memory existingDeployments = vm.readFile(deploymentsFilePath);
-        string memory moduleName = _trimModuleName(moduleName_);
-        string memory newKeyToAppend = string.concat(
-            "[",
-            moduleName,
-            "]\n",
-            'contract="',
-            vm.toString(contract_),
-            '"\n\n'
-        );
-
-        vm.writeFile(deploymentsFilePath, string.concat(existingDeployments, newKeyToAppend));
-        vm.closeFile(deploymentsFilePath);
-    }
-
-    function _trimModuleName(string memory moduleName_) private pure returns (string memory) {
-        bytes memory moduleNameBytes = bytes(moduleName_);
-        uint8 moduleNameLength = uint8(moduleNameBytes.length) - 4; // Remove the ".sol" extension
-        bytes memory trimmedModuleName = new bytes(moduleNameLength);
-
-        for (uint8 i; i < moduleNameLength; ++i) {
-            trimmedModuleName[i] = moduleNameBytes[i];
-        }
-
-        return string(trimmedModuleName);
+    function _getNewKeyToAppend(string memory moduleName_, address contract_) private pure returns (string memory) {
+        return string.concat("[", moduleName_, "]\n", 'contract="', vm.toString(contract_), '"\n\n');
     }
 }

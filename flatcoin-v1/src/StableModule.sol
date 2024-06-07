@@ -64,7 +64,9 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
 
         uint32 maxAge = _getMaxAge(_executableAtTime);
 
-        _liquidityMinted = (depositAmount * (10 ** decimals())) / stableCollateralPerShare(maxAge);
+        _liquidityMinted =
+            (depositAmount * (10 ** decimals())) /
+            stableCollateralPerShare({_maxAge: maxAge, _priceDiffCheck: true});
 
         if (_liquidityMinted < _announcedDeposit.minAmountOut)
             revert FlatcoinErrors.HighSlippage(_liquidityMinted, _announcedDeposit.minAmountOut);
@@ -99,7 +101,7 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
 
         uint32 maxAge = _getMaxAge(_executableAtTime);
 
-        uint256 stableCollateralPerShareBefore = stableCollateralPerShare(maxAge);
+        uint256 stableCollateralPerShareBefore = stableCollateralPerShare({_maxAge: maxAge, _priceDiffCheck: true});
         _amountOut = (withdrawAmount * stableCollateralPerShareBefore) / (10 ** decimals());
 
         // Unlock the locked LP tokens before burning.
@@ -110,7 +112,7 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
 
         vault.updateStableCollateralTotal(-int256(_amountOut));
 
-        uint256 stableCollateralPerShareAfter = stableCollateralPerShare(maxAge);
+        uint256 stableCollateralPerShareAfter = stableCollateralPerShare({_maxAge: maxAge, _priceDiffCheck: true});
 
         // Check that there is no significant impact on stable token price.
         // This should never happen and means that too much value or not enough value was withdrawn.
@@ -161,14 +163,15 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
     /// @dev Balance takes into account trader profit and loss and funding rate.
     /// @return _stableCollateralBalance The total collateral available for withdrawal.
     function stableCollateralTotalAfterSettlement() public view returns (uint256 _stableCollateralBalance) {
-        return stableCollateralTotalAfterSettlement({_maxAge: type(uint32).max});
+        return stableCollateralTotalAfterSettlement({_maxAge: type(uint32).max, _priceDiffCheck: false});
     }
 
     /// @notice Function to calculate total stable side collateral after accounting for trader profit and loss and funding fees.
     /// @param _maxAge The oldest price oracle timestamp that can be used. Set to 0 to ignore.
     /// @return _stableCollateralBalance The total collateral available for withdrawal.
     function stableCollateralTotalAfterSettlement(
-        uint32 _maxAge
+        uint32 _maxAge,
+        bool _priceDiffCheck
     ) public view returns (uint256 _stableCollateralBalance) {
         // Assumption => pnlTotal = pnlLong + fundingAccruedLong
         // The assumption is based on the fact that stable LPs are the counterparty to leverage traders.
@@ -179,7 +182,7 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
         //      due to calling `_settleFundingFees()`. Although this still means `netTotal` includes the funding
         //      adjusted long PnL, it might not be clear to the reader of the code.
         int256 netTotal = ILeverageModule(vault.moduleAddress(FlatcoinModuleKeys._LEVERAGE_MODULE_KEY))
-            .fundingAdjustedLongPnLTotal({maxAge: _maxAge});
+            .fundingAdjustedLongPnLTotal({maxAge: _maxAge, priceDiffCheck: _priceDiffCheck});
 
         // The flatcoin LPs are the counterparty to the leverage traders.
         // So when the traders win, the flatcoin LPs lose and vice versa.
@@ -196,18 +199,23 @@ contract StableModule is IStableModule, ModuleUpgradeable, ERC20LockableUpgradea
     /// @notice Function to calculate the collateral per share.
     /// @return _collateralPerShare The collateral per share.
     function stableCollateralPerShare() public view returns (uint256 _collateralPerShare) {
-        return stableCollateralPerShare({_maxAge: type(uint32).max});
+        return stableCollateralPerShare({_maxAge: type(uint32).max, _priceDiffCheck: false});
     }
 
     /// @notice Function to calculate the collateral per share.
     /// @param _maxAge The oldest price oracle timestamp that can be used.
     /// @return _collateralPerShare The collateral per share.
-    function stableCollateralPerShare(uint32 _maxAge) public view returns (uint256 _collateralPerShare) {
+    function stableCollateralPerShare(
+        uint32 _maxAge,
+        bool _priceDiffCheck
+    ) public view returns (uint256 _collateralPerShare) {
         uint256 totalSupply = totalSupply();
 
         if (totalSupply > 0) {
-            uint256 stableBalance = stableCollateralTotalAfterSettlement(_maxAge);
-
+            uint256 stableBalance = stableCollateralTotalAfterSettlement({
+                _maxAge: _maxAge,
+                _priceDiffCheck: _priceDiffCheck
+            });
             _collateralPerShare = (stableBalance * (10 ** decimals())) / totalSupply;
         } else {
             // no shares have been minted yet

@@ -11,12 +11,11 @@
     "lint:sol": "solhint 'src/**/*.sol' --max-warnings 0",
     "lint:sol:fix": "pnpm lint:sol -- --fix",
     "test": "forge t",
+    "test:unit": "forge t --no-match-test '(test_fuzz:?)'",
+    "test:fuzz": "forge t --match-test '(test_fuzz:?)'",
     "abigen": "hardhat export-abi",
-    "deploy:fork": "node scripts/deployment/reset-config.js && hardhat run scripts/deployment/deploy.testnet.js --network localhost",
-    "deploy:testnet": "node scripts/deployment/reset-config.js && hardhat run scripts/deployment/deploy.testnet.js --network baseGoerli",
-    "tests:unit": "forge t --no-match-test '(test_fuzz:?)'",
-    "tests:fuzz": "forge t --match-test '(test_fuzz:?)'",
-    "prettier:check": "npx prettier --check --plugin=prettier-plugin-solidity '{src,test}/**/*.sol' && npx prettier --check '{scripts,tasks}/**/*.js'",
+    "run:oz": "forge clean && FOUNDRY_PROFILE=openzeppelin forge script",
+    "prettier:check": "prettier --check --plugin=prettier-plugin-solidity '{src,test,script}/**/*.sol'",
     "prepare": "husky",
     "preinstall": "npx only-allow pnpm"
   },
@@ -33,17 +32,16 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-foundry": "^1.1.1",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@openzeppelin/hardhat-upgrades": "^3.0.5",
     "@openzeppelin/upgrades-core": "^1.32.5",
     "dotenv": "^16.4.5",
-    "ethers": "^6.11.1",
-    "hardhat": "^2.22.2",
+    "ethers": "^6.12.1",
+    "hardhat": "^2.22.3",
     "hardhat-abi-exporter": "^2.10.1",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
     "prettier-plugin-solidity": "^1.3.1",
-    "solhint": "^4.5.2"
+    "solhint": "^4.5.4"
   },
   "engines": {
     "node": ">=20",

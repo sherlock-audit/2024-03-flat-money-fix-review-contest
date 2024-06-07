@@ -182,15 +182,6 @@ contract FlatcoinVault is IFlatcoinVault, OwnableUpgradeable {
         // we can ignore the funding fees here.
         int256 newMarginDepositedTotal = _globalPositions.marginDepositedTotal + _marginDelta;
 
-        // Check that the sum of margin of all the leverage traders is not negative.
-        // Rounding errors shouldn't result in a negative margin deposited total given that
-        // we are rounding down the profit loss of the position.
-        // The margin may be negative if liquidations are not happening in a timely manner.
-        // In such a case, the system should continue to function as normal.
-        if (newMarginDepositedTotal < 0) {
-            newMarginDepositedTotal = 0;
-        }
-
         int256 averageEntryPrice = int256(_globalPositions.averagePrice);
         int256 sizeOpenedTotal = int256(_globalPositions.sizeOpenedTotal);
 
@@ -206,7 +197,6 @@ contract FlatcoinVault is IFlatcoinVault, OwnableUpgradeable {
             });
         } else {
             // Close the last remaining position.
-            // TODO: Move this to an invariant check
             if (newMarginDepositedTotal > 1e6) revert FlatcoinErrors.MarginMismatchOnClose();
 
             delete _globalPositions;
@@ -444,7 +434,9 @@ contract FlatcoinVault is IFlatcoinVault, OwnableUpgradeable {
 
         // The stable collateral shouldn't be negative as the other calculations which depend on this
         // will behave in unexpected manners.
-        stableCollateralTotal = (newStableCollateralTotal > 0) ? uint256(newStableCollateralTotal) : 0;
+        if (newStableCollateralTotal < 0) revert FlatcoinErrors.ValueNotPositive("stableCollateralTotal");
+
+        stableCollateralTotal = newStableCollateralTotal.toUint256();
     }
 
     /// @dev Function to calculate the unrecorded funding amount.

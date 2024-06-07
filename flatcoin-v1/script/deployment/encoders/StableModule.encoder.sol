@@ -21,10 +21,7 @@ contract StableModuleEncoder is EncoderBase {
         return
             abi.encodeCall(
                 StableModule.initialize,
-                (
-                    vault,
-                    configTomlFile.readUint(".StableModule.stableWithdrawFee")
-                )
+                (vault, configTomlFile.readUint(".StableModule.stableWithdrawFee"))
             );
     }
 }

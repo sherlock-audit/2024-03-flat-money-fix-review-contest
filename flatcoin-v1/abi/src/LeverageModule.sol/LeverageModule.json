@@ -390,7 +390,13 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "lastPrice",
+        "name": "averagePrice",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "adjustPrice",
         "type": "uint256"
       }
     ],
@@ -635,24 +641,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "_moduleKey",
-        "type": "bytes32"
-      }
-    ],
-    "name": "clearAllLocks",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "_account",
         "type": "address"
@@ -798,13 +786,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "_maxAge",
-        "type": "uint32"
-      }
-    ],
+    "inputs": [],
     "name": "fundingAdjustedLongPnLTotal",
     "outputs": [
       {
@@ -817,7 +799,18 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "_maxAge",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "_priceDiffCheck",
+        "type": "bool"
+      }
+    ],
     "name": "fundingAdjustedLongPnLTotal",
     "outputs": [
       {

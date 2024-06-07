@@ -150,24 +150,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "moduleKey",
-        "type": "bytes32"
-      }
-    ],
-    "name": "clearAllLocks",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "account",
         "type": "address"
@@ -313,13 +295,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "maxAge",
-        "type": "uint32"
-      }
-    ],
+    "inputs": [],
     "name": "fundingAdjustedLongPnLTotal",
     "outputs": [
       {
@@ -332,7 +308,18 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "maxAge",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "priceDiffCheck",
+        "type": "bool"
+      }
+    ],
     "name": "fundingAdjustedLongPnLTotal",
     "outputs": [
       {

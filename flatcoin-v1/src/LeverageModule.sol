@@ -450,17 +450,20 @@ contract LeverageModule is ILeverageModule, ModuleUpgradeable, ERC721LockableEnu
     /// @dev Adjusts for the funding fees accrued.
     /// @return _fundingAdjustedPnL The total profit and loss of all the leverage positions.
     function fundingAdjustedLongPnLTotal() public view returns (int256 _fundingAdjustedPnL) {
-        return fundingAdjustedLongPnLTotal({_maxAge: type(uint32).max});
+        return fundingAdjustedLongPnLTotal({_maxAge: type(uint32).max, _priceDiffCheck: false});
     }
 
     /// @notice Returns the total profit and loss of all the leverage positions.
     /// @dev Adjusts for the funding fees accrued.
     /// @param _maxAge The maximum age of the oracle price to be used.
     /// @return _fundingAdjustedPnL The total profit and loss of all the leverage positions.
-    function fundingAdjustedLongPnLTotal(uint32 _maxAge) public view returns (int256 _fundingAdjustedPnL) {
+    function fundingAdjustedLongPnLTotal(
+        uint32 _maxAge,
+        bool _priceDiffCheck
+    ) public view returns (int256 _fundingAdjustedPnL) {
         (uint256 currentPrice, ) = IOracleModule(vault.moduleAddress(FlatcoinModuleKeys._ORACLE_MODULE_KEY)).getPrice({
             maxAge: _maxAge,
-            priceDiffCheck: true
+            priceDiffCheck: _priceDiffCheck
         });
 
         FlatcoinStructs.VaultSummary memory vaultSummary = vault.getVaultSummary();
